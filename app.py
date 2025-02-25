@@ -5,10 +5,9 @@ import uuid
 from astrapy import DataAPIClient
 from dotenv import load_dotenv
 import os
+import time
 from openai import OpenAI
 import urllib.parse  # For URL encoding the tweet
-import webbrowser   # For redirecting to Twitter
-import time         # For text animation timing
 
 # Load environment variables
 load_dotenv()
@@ -72,34 +71,16 @@ st.markdown("""
         text-align: center;
         margin-bottom: 20px;
     }
-    .stButton>button {
-        background-color: #000000;  /* X's black background */
-        color: white;
-        border-radius: 10px;
-        padding: 10px 20px;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-    }
-    .stButton>button:before {
-        content: '𝕏';  /* X logo (Unicode) */
-        font-size: 20px;
-        margin-right: 8px;
-    }
-    .stButton>button:hover {
-        background-color: #333333;  /* Darker gray on hover */
-    }
     .content-box {
         background-color: #F5F5F5;
         padding: 20px;
         border-radius: 10px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        margin-top: 0px;  /* Remove extra space above */
+        margin-top: 0px;
     }
     .no-margin {
-        margin-bottom: 10px;  /* Tighten spacing */
+        margin-bottom: 10px;
     }
-    /* Custom text-based loading animation */
     .stSpinner > div {
         display: flex;
         justify-content: center;
@@ -113,28 +94,24 @@ st.markdown("""
         animation: textSpin 3s infinite;
     }
     @keyframes textSpin {
-        0% { content: 'Adding spices...'; }
-        25% { content: 'Adding masala...'; }
-        50% { content: 'Mixing humor...'; }
-        75% { content: 'Roasting away...'; }
-        100% { content: 'Sizzling roast...'; }
-    }
-    /* Remove default Streamlit success message background */
-    .stSuccess {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 0 !important;
+        0% { content: 'Spicing things up...'; }
+        20% { content: 'Cooking up a roast...'; }
+        40% { content: 'Grilling opinions...'; }
+        60% { content: 'Serving up some heat...'; }
+        80% { content: 'Dishing out sass...'; }
+        100% { content: 'Basting in brilliance...'; }
     }
     </style>
 """, unsafe_allow_html=True)
 
 # Custom loading text animation function
-def custom_spinner(text):
-    loading_texts = ["Adding spices...", "Adding masala...", "Mixing humor...", "Roasting away...", "Sizzling roast..."]
-    for _ in range(5):  # Loop a few times to simulate loading (adjust duration as needed)
+def custom_spinner():
+    loading_texts = ["Spicing things up...", "Cooking up a roast...", "Grilling opinions...", 
+                     "Serving up some heat...", "Dishing out sass...", "Basting in brilliance..."]
+    for _ in range(5):  
         for loading_text in loading_texts:
             st.spinner(loading_text)
-            time.sleep(0.5)  # Slow down animation for visibility
+            time.sleep(0.5)
 
 # Main app logic
 st.markdown("<h1 class='big-title'>Resume Roster</h1>", unsafe_allow_html=True)
@@ -159,35 +136,45 @@ if roast_id:
 else:
     with st.container():
         uploaded_file = st.file_uploader("Upload your resume", type=["pdf", "docx"], help="Upload a PDF or DOCX file")
+        
         if uploaded_file:
             resume_text = extract_text(uploaded_file)
             if resume_text:
                 st.success("Resume uploaded successfully!", icon="✅")
+                
                 with st.spinner():
-                    custom_spinner("Generating your roast and tips...")  # Use custom text animation
+                    custom_spinner()  # Show loading animation
+
+                    # Generate Roast and Tips
                     roast_prompt = f"Roast this resume with funny, sarcastic humor like a comedian: {resume_text}"
                     tips_prompt = f"Provide three specific improvement tips for this resume in a bulleted list: {resume_text}"
                     roast = generate_response(roast_prompt)
                     tips = generate_response(tips_prompt)
+
+                    # Generate tweet link after roast is created
+                    tweet_text = f"Just got my resume absolutely roasted!🔥😂'{roast[:100]}...'💀 Want to see how your resume holds up? Try it here: resume-roster.streamlit.app/"
+                    tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote(tweet_text)}"
+
+                # Display the roast and tips
                 st.markdown("<div class='content-box no-margin'>", unsafe_allow_html=True)
                 st.subheader("Your Resume Roast")
                 st.write(roast)
                 st.subheader("Improvement Tips")
                 st.write(tips)
-                if st.button("Share"):
-                    roast_id = str(uuid.uuid4())
-                    collection.insert_one({
-                        "_id": roast_id,
-                        "resume_text": resume_text,
-                        "roast": roast,
-                        "tips": tips
-                    })
-                    tweet_text = f"Just got my resume absolutely roasted!🔥😂'{roast[:100]}...'💀 Want to see how your resume holds up? Try it here: resume-roster.streamlit.app/"
-                    tweet_url = f"https://twitter.com/intent/tweet?text={urllib.parse.quote(tweet_text)}"
-                    webbrowser.open(tweet_url)  # Redirects to Twitter
+
+                # Display "Share on X" button **only after roast is generated**
+                st.markdown(f"""
+                    <a href="{tweet_url}" target="_blank">
+                        <button style="background-color: black; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer;">
+                            Share on X
+                        </button>
+                    </a>
+                """, unsafe_allow_html=True)
+
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.error("Failed to extract text from the resume.")
+        
         st.write("Want a detailed critique? Coming soon!")
 
 # Add X handle and link at the bottom
